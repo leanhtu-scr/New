@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Mini Blog – Vũ trụ</title>
+  <style>
+    /* ======= Space Background (no external JS needed) ======= */
+    :root {
+      --bg-url: url('https://images-assets.nasa.gov/image/PIA12235/PIA12235~orig.jpg'); /* NASA public domain */
+    }
+    html, body { height: 100%; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #0b1020;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-y: auto;
+    }
+    /* Layered background: image + gradient + subtle stars */
+    body::before {
+      content: "";
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(1200px 600px at 10% 20%, rgba(64,87,255,0.25), transparent 60%),
+        radial-gradient(1000px 700px at 90% 10%, rgba(255,64,129,0.18), transparent 65%),
+        radial-gradient(1200px 800px at 70% 80%, rgba(0,255,200,0.12), transparent 60%),
+        var(--bg-url) center/cover no-repeat fixed;
+      filter: saturate(1.15) brightness(0.9);
+      z-index: -2;
+    }
+    body::after {
+      content: "";
+      position: fixed; inset: 0;
+      background-image:
+        radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,0.8), transparent 60%),
+        radial-gradient(1.5px 1.5px at 70% 40%, rgba(255,255,255,0.7), transparent 60%),
+        radial-gradient(1.5px 1.5px at 40% 70%, rgba(255,255,255,0.6), transparent 60%),
+        radial-gradient(1px 1px at 80% 80%, rgba(255,255,255,0.6), transparent 60%);
+      opacity: 0.6;
+      animation: twinkle 8s infinite ease-in-out;
+      z-index: -1;
+    }
+    @keyframes twinkle { 0%,100%{opacity:.55} 50%{opacity:.85} }
+
+    /* ======= Card ======= */
+    .container {
+      width: min(820px, 92vw);
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.18);
+      padding: 22px;
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      backdrop-filter: blur(8px);
+      color: #f3f6ff;
+    }
+    h2 { text-align: center; margin-top: 0; letter-spacing: .4px; }
+    label { font-size: 14px; opacity: .9; }
+
+    input, textarea, button {
+      width: 100%;
+      padding: 10px 12px;
+      margin: 6px 0;
+      border: 1px solid rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.06);
+      color: #f3f6ff;
+      border-radius: 10px;
+      outline: none;
+    }
+    input::placeholder, textarea::placeholder { color: #dbe3ffb0; }
+    button {
+      background: linear-gradient(135deg,#6ea8ff,#8a5cff);
+      border: none; cursor: pointer; font-weight: 600;
+    }
+    button:hover { filter: brightness(1.05); }
+    .danger { background: linear-gradient(135deg,#ff6b6b,#c92a2a); }
+    .subtle { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .hidden { display: none; }
+
+    .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+    .toolbar input { flex:1; }
+
+    .blog-post {
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 12px; padding: 12px; margin-top: 15px;
+      background: rgba(0,0,0,0.28);
+    }
+    .meta { font-size: 12px; opacity: .85; margin: 4px 0 8px; }
+    .actions { display:flex; gap:8px; margin: 8px 0; }
+
+    .comments { margin-top: 10px; padding-left: 10px; border-left: 3px solid #8a5cff; }
+    .comment { background: rgba(255,255,255,0.06); padding: 6px; border-radius: 6px; margin: 5px 0; }
+
+    .media img { max-width: 100%; margin-top: 8px; border-radius: 10px; }
+
+    #welcomeMsg { text-align: right; font-style: italic; color: #e1e6ff; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Mini Blog Vũ Trụ</h2>
+    <div id="welcomeMsg" class="hidden"></div>
+
+    <!-- Background chooser -->
+    <div class="toolbar">
+      <input id="bgUrl" placeholder="Dán URL ảnh vũ trụ để đổi background (ví dụ ảnh NASA/Google Images)…">
+      <button class="subtle" onclick="applyBackground()">Đổi nền</button>
+    </div>
+
+    <!-- Form đăng nhập -->
+    <div id="loginForm">
+      <h3>Đăng nhập</h3>
+      <input type="text" id="loginUser" placeholder="Tên người dùng">
+      <input type="password" id="loginPass" placeholder="Mật khẩu">
+      <button onclick="login()">Đăng nhập</button>
+      <p>Chưa có tài khoản? <a href="#" onclick="showRegister()">Đăng ký</a></p>
+
+      <h3>Đổi mật khẩu</h3>
+      <input type="text" id="changeUser" placeholder="Tên người dùng">
+      <input type="password" id="oldPass" placeholder="Mật khẩu cũ">
+      <input type="password" id="newPass" placeholder="Mật khẩu mới">
+      <button onclick="changePassword()">Đổi mật khẩu</button>
+    </div>
+
+    <!-- Form đăng ký -->
+    <div id="registerForm" class="hidden">
+      <h3>Đăng ký</h3>
+      <input type="text" id="regUser" placeholder="Tên người dùng">
+      <input type="password" id="regPass" placeholder="Mật khẩu">
+      <button onclick="register()">Đăng ký</button>
+      <p>Đã có tài khoản? <a href="#" onclick="showLogin()">Đăng nhập</a></p>
+    </div>
+
+    <!-- Phần đăng blog (mỗi ngày 1 ảnh) -->
+    <div id="blogForm" class="hidden">
+      <h3>Đăng ảnh (mỗi ngày 1 lần)</h3>
+      <input type="file" id="mediaFile" accept="image/*">
+      <button onclick="postBlog()">Đăng</button>
+    </div>
+
+    <!-- Nút đăng xuất -->
+    <button id="logoutBtn" class="hidden danger" onclick="logout()">Đăng xuất</button>
+
+    <!-- Danh sách blog -->
+    <div id="blogList"></div>
+  </div>
+
+  <script>
+    let users = JSON.parse(localStorage.getItem("users")) || [{username:"admin", password:"admin"}];
+    let blogs = JSON.parse(localStorage.getItem("blogs")) || [];
+    let currentUser = null;
+
+    function saveUsers(){ localStorage.setItem("users", JSON.stringify(users)); }
+    function saveBlogs(){ localStorage.setItem("blogs", JSON.stringify(blogs)); }
+
+    // ======= UI helper =======
+    function applyBackground(){
+      const url = document.getElementById('bgUrl').value.trim();
+      if(url){ document.documentElement.style.setProperty('--bg-url', `url('${url}')`); }
+    }
+
+    function showRegister(){
+      document.getElementById("loginForm").classList.add("hidden");
+      document.getElementById("registerForm").classList.remove("hidden");
+    }
+    function showLogin(){
+      document.getElementById("registerForm").classList.add("hidden");
+      document.getElementById("loginForm").classList.remove("hidden");
+    }
+
+    function register(){
+      let u = document.getElementById("regUser").value.trim();
+      let p = document.getElementById("regPass").value;
+      if(u && p){
+        if(users.find(x=>x.username===u)) return alert("Tên người dùng đã tồn tại!");
+        users.push({username:u, password:p});
+        saveUsers(); alert("Đăng ký thành công!"); showLogin();
+      } else alert("Vui lòng nhập đủ thông tin");
+    }
+
+    function login(){
+      let u = document.getElementById("loginUser").value.trim();
+      let p = document.getElementById("loginPass").value;
+      let found = users.find(x => x.username===u && x.password===p);
+      if(found){
+        currentUser = found;
+        document.getElementById("loginForm").classList.add("hidden");
+        document.getElementById("registerForm").classList.add("hidden");
+        document.getElementById("logoutBtn").classList.remove("hidden");
+        document.getElementById("welcomeMsg").classList.remove("hidden");
+        document.getElementById("welcomeMsg").innerText = "Xin chào, "+u;
+        document.getElementById("blogForm").classList.remove("hidden"); // Cho phép mọi người đăng 1 ảnh/ngày nếu bạn muốn; hiện vẫn để admin
+        renderBlogs();
+      } else alert("Sai tài khoản hoặc mật khẩu!");
+    }
+
+    function logout(){
+      currentUser = null;
+      document.getElementById("loginForm").classList.remove("hidden");
+      document.getElementById("blogForm").classList.add("hidden");
+      document.getElementById("logoutBtn").classList.add("hidden");
+      document.getElementById("welcomeMsg").classList.add("hidden");
+    }
+
+    function changePassword(){
+      let u = document.getElementById("changeUser").value.trim();
+      let oldP = document.getElementById("oldPass").value;
+      let newP = document.getElementById("newPass").value;
+      let found = users.find(x => x.username===u && x.password===oldP);
+      if(found){ found.password = newP; saveUsers(); alert("Đổi mật khẩu thành công!"); }
+      else alert("Sai thông tin tài khoản hoặc mật khẩu cũ!");
+    }
+
+    // ======= Blog =======
+    function renderBlogs(){
+      let blogList = document.getElementById("blogList");
+      blogList.innerHTML = "";
+      blogs.slice().reverse().forEach((blog, iRev)=>{
+        const index = blogs.length-1-iRev; // index in original array
+        let mediaHTML = blog.media ? `<div class='media'><img src='${blog.media.src}' alt='ảnh bài viết'></div>` : "";
+        let meta = `<p class='meta'>Đăng bởi <b>${blog.author}</b> • ${blog.time}${blog.editedTime ? ` • <i>Chỉnh sửa: ${blog.editedTime}</i>` : ''}</p>`;
+        let controls = "";
+        if(currentUser && (currentUser.username === "admin" || currentUser.username === blog.author)){
+          controls = `<div class='actions'>
+            <button class='subtle' onclick='startEdit(${index})'>Sửa</button>
+            <button class='danger' onclick='deleteBlog(${index})'>Xóa</button>
+          </div>`;
+        }
+        let blogBox = document.createElement("div");
+        blogBox.className = "blog-post";
+        blogBox.innerHTML = `${meta}${mediaHTML}${controls}
+          <div class='comments'>${blog.comments.map(c=>`<div class='comment'><b>${c.user}:</b> ${c.text}</div>`).join("")}</div>
+          <input type='text' placeholder='Viết bình luận...' onkeypress='addComment(event,this,${index})'>`;
+        blogList.appendChild(blogBox);
+      });
+    }
+
+    function postBlog(){
+      if(!currentUser) return alert('Hãy đăng nhập để đăng bài');
+      // Giới hạn: mỗi người 1 bài/ngày, chỉ ảnh
+      let today = new Date().toISOString().split('T')[0];
+      let alreadyPosted = blogs.find(b => b.author===currentUser.username && b.date===today);
+      if(alreadyPosted) return alert("Bạn đã đăng bài hôm nay rồi!");
+
+      let fileInput = document.getElementById("mediaFile");
+      let file = fileInput.files[0];
+      if(!file || !file.type.startsWith('image')) return alert("Bạn chỉ có thể đăng ảnh!");
+
+      let reader = new FileReader();
+      reader.onload = function(e){
+        let now = new Date();
+        let timeStr = now.toLocaleDateString('vi-VN')+" "+now.toLocaleTimeString('vi-VN');
+        blogs.push({author: currentUser.username, media:{src:e.target.result, type:file.type}, comments:[], date:today, time:timeStr});
+        saveBlogs(); renderBlogs(); fileInput.value = "";
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function deleteBlog(index){
+      if(!currentUser) return;
+      if(currentUser.username==="admin" || currentUser.username===blogs[index].author){
+        blogs.splice(index,1); saveBlogs(); renderBlogs();
+      } else alert("Bạn không có quyền xóa bài này!");
+    }
+
+    // ======= Edit (replace image) =======
+    function startEdit(index){
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = 'image/*';
+      input.onchange = () => applyEdit(index, input.files[0]);
+      input.click();
+    }
+    function applyEdit(index, file){
+      if(!file || !file.type.startsWith('image')) return alert('Chỉ chọn ảnh');
+      if(!currentUser) return;
+      const post = blogs[index];
+      if(!(currentUser.username==='admin' || currentUser.username===post.author)) return alert('Không có quyền sửa');
+      const reader = new FileReader();
+      reader.onload = (e)=>{
+        post.media = {src: e.target.result, type: file.type};
+        post.editedTime = new Date().toLocaleDateString('vi-VN')+" "+new Date().toLocaleTimeString('vi-VN');
+        saveBlogs(); renderBlogs();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function addComment(e,input,blogIndex){
+      if(e.key==="Enter" && input.value){
+        let username = currentUser? currentUser.username : "Ẩn danh";
+        blogs[blogIndex].comments.push({user:username, text:input.value});
+        saveBlogs(); renderBlogs();
+      }
+    }
+
+    // Render khi load lại trang
+    renderBlogs();
+  </script>
+</body>
+</html>
